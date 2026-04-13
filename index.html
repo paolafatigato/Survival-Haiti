@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Escape from Saint-Domingue — Haiti 1791</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     NOTIFICATION
+══════════════════════════════════════════════════════════ -->
+<div class="notification" id="notification"></div>
+
+<!-- ══════════════════════════════════════════════════════════
+     LEGENDARY OVERLAY
+══════════════════════════════════════════════════════════ -->
+<div class="legendary-overlay" id="legendary-overlay" style="display:none;">
+  <div class="legendary-box">
+    <div class="lg-symbol">🔱</div>
+    <div class="lg-title">BOUKMAN'S SPIRIT</div>
+    <div class="lg-quote">
+      "Do not forget that God who created the sun watches over us from the clouds and sees all the white has done.
+      The God of the white asks crimes of him, but our God asks good works of us.
+      Listen to liberty that speaks in the hearts of all of us."
+      <br><br>
+      <span style="font-size:.85rem;color:var(--copper);">— Dutty Boukman, Bois Caïman ceremony, 22 August 1791</span>
+    </div>
+    <div class="lg-instruction">
+      🏅 All teams receive <strong>+2 tokens</strong> for this round.<br><br>
+      Every team must say in English: <em>"Freedom means..."</em>
+    </div>
+    <button class="btn btn-gold" id="legendary-close-btn">Continue → 🎲</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN 1 — SETUP
+══════════════════════════════════════════════════════════ -->
+<div class="screen active" id="screen-setup">
+  <div class="setup-inner">
+
+    <div class="game-logo">
+      <span class="chains">⛓ &nbsp; ⛓ &nbsp; ⛓</span>
+      <h1>Escape from Saint-Domingue</h1>
+      <div class="subtitle">Haiti 1791 · Survival RPG · CLIL English A2–B1</div>
+    </div>
+
+    <!-- Team count -->
+    <div class="setup-panel">
+      <h2>⚔ Number of Teams</h2>
+      <div class="team-count-row">
+        <span class="team-count-label">How many teams are playing?</span>
+        <div class="team-count-btns">
+          <button class="count-btn" data-n="2">2</button>
+          <button class="count-btn" data-n="3">3</button>
+          <button class="count-btn active" data-n="4">4</button>
+          <button class="count-btn" data-n="5">5</button>
+          <button class="count-btn" data-n="6">6</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Team names -->
+    <div class="setup-panel">
+      <h2>🏴 Team Names</h2>
+      <div class="team-inputs" id="team-inputs">
+        <!-- rendered by JS -->
+      </div>
+    </div>
+
+    <!-- Item selection -->
+    <div class="setup-panel">
+      <h2>🎒 Choose Items — 5 per team</h2>
+      <div style="font-size:.9rem;color:var(--slate);margin-bottom:1rem;">
+        Each team selects exactly 5 items to carry on the escape. Choose carefully —
+        different events reward different items!
+      </div>
+      <div id="items-container"></div>
+    </div>
+
+    <!-- Rounds -->
+    <div class="setup-panel">
+      <h2>🎲 Game Settings</h2>
+      <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:.9rem;color:var(--slate);margin-bottom:.4rem;">Number of rounds:</div>
+          <select id="select-rounds" style="background:rgba(255,255,255,0.07);border:1.5px solid rgba(163,133,96,0.25);
+            border-radius:8px;color:var(--cream);padding:.5rem .8rem;font-size:1rem;font-family:'Crimson Pro',serif;">
+            <option value="6">6 rounds (quick)</option>
+            <option value="8">8 rounds</option>
+            <option value="10" selected>10 rounds (standard)</option>
+            <option value="12">12 rounds (extended)</option>
+          </select>
+        </div>
+        <div style="font-size:.85rem;color:var(--slate);line-height:1.7;">
+          Each team starts with <strong style="color:var(--ochre);">6 tokens</strong>.<br>
+          Max tokens: <strong style="color:var(--ochre);">12</strong> &nbsp;·&nbsp;
+          Reach <strong style="color:var(--coral);">0</strong> tokens = captured (penalty only, still play).
+        </div>
+      </div>
+    </div>
+
+    <div class="setup-footer">
+      <button class="btn btn-primary" id="btn-start-game" style="font-size:1.1rem;padding:1rem 3rem;" onclick="startGame()">
+        Start the Escape 🔱
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN 2 — GAME
+══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-game">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">⛓ SAINT-DOMINGUE · 1791</div>
+
+    <div class="round-badge">
+      ROUND
+      <span id="round-display">1 / 10</span>
+    </div>
+
+    <div class="scoreboard-title">🏅 TEAM SCORES</div>
+    <div class="teams-scoreboard">
+      <div id="teams-list"><!-- rendered by JS --></div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div style="font-size:.65rem;letter-spacing:2px;color:var(--slate);text-transform:uppercase;margin-bottom:.3rem;">Tokens</div>
+      <div style="font-size:.75rem;color:var(--slate);line-height:1.6;">
+        🎲 D20 → event<br>
+        ⚔️ D6 → severity<br>
+        🎯 D20 → ability check<br>
+        ★ Item bonus: +1
+      </div>
+      <div class="sep"></div>
+      <button class="btn btn-ghost" id="btn-reset" style="font-size:.75rem;padding:.5rem 1rem;width:100%;">
+        🔄 Reset Game
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+    <div id="main-area">
+      <!-- rendered by JS -->
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN 3 — GAME OVER
+══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-gameover">
+  <div class="gameover-inner">
+    <div style="font-size:4rem;margin-bottom:1rem;">🔱</div>
+    <div class="gameover-title">Freedom!</div>
+    <div class="gameover-sub">The mountain camp has been reached. Haiti will be free.</div>
+
+    <div style="background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.2);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem;font-size:.95rem;color:var(--sand);line-height:1.8;font-style:italic;">
+      "On 1 January 1804, Haiti declared independence — the first free Black republic in history,
+      born from the only successful revolution of enslaved people in the world.
+      It began on a night like the one you just survived."
+    </div>
+
+    <div style="font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:3px;color:var(--slate);margin-bottom:.8rem;">FINAL STANDINGS</div>
+    <div class="final-leaderboard" id="final-leaderboard"></div>
+
+    <div style="margin-top:.5rem;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.2);border-radius:12px;padding:1rem;margin-bottom:2rem;">
+      <div style="font-family:'Cinzel',serif;font-size:.8rem;color:var(--gold);letter-spacing:2px;margin-bottom:.4rem;">🏆 WINNER</div>
+      <div style="font-size:1.8rem;font-family:'Cinzel',serif;color:var(--cream);" id="winner-name">—</div>
+    </div>
+
+    <div style="margin-bottom:2rem;font-size:.95rem;color:var(--slate);line-height:1.8;">
+      <strong style="color:var(--copper);">Reflection questions for the class:</strong><br>
+      • Which item was the most useful? Would you change your choices?<br>
+      • What was the hardest moment in the game?<br>
+      • What does this tell us about the real people who escaped to the mountains in 1791?<br>
+      • Why is it important to remember Toussaint Louverture and the Haitian Revolution?
+    </div>
+
+    <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+      <button class="btn btn-primary" id="btn-gameover-reset" style="font-size:1rem;padding:.9rem 2.5rem;">
+        🔄 Play Again
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ SCRIPTS ══ -->
+<script src="data.js"></script>
+<script src="game.js"></script>
+
+</body>
+</html>

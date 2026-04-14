@@ -281,4 +281,128 @@ const EVENTS = [
   },
 ];
 
-window.GAME_DATA = { ABILITIES, ITEMS, EVENTS, SEVERITY, ROLL_OUTCOMES };
+// ═══════════════════════════════════════════════════════════════
+//  GRAMMAR QUIZ PHASE — 3 quizzes before the escape begins
+//  Topics: Simple Past · Past Perfect · Passive Voice
+// ═══════════════════════════════════════════════════════════════
+
+// Historically accurate BONUS ITEMS won through grammar quizzes
+const BONUS_ITEMS = [
+  {
+    id: 'braids_rice',
+    name: 'Rice Hidden in Braids',
+    emoji: '🌾',
+    desc: 'A handful of rice secretly woven into the braids — an act of resistance passed down from the Middle Passage.',
+    bonus: 'Hidden food: survive one desperate day without rations. +1 CON roll.',
+    abilities: ['WIS', 'CON'],
+    historicalNote: 'Enslaved women hid seeds of okra, rice and other African crops in their braided hair during the slave trade — preserving both food and homeland in the Americas.',
+  },
+  {
+    id: 'cowrie',
+    name: 'Cowrie Shell Necklace',
+    emoji: '🐚',
+    desc: 'A necklace of cowrie shells from West Africa — currency, spiritual protection, and a silent signal to other freedom fighters.',
+    bonus: 'Recognition: trusted allies help you once. +1 CHA roll.',
+    abilities: ['CHA', 'WIS'],
+    historicalNote: 'Cowrie shells held deep spiritual meaning in Vodou practice and West African tradition. They were used as currency and worn for protection across the Caribbean.',
+  },
+  {
+    id: 'grisgris',
+    name: 'Gris-Gris Bag',
+    emoji: '🪬',
+    desc: 'A small cloth pouch with sacred herbs, earth from the homeland and a carved bone. Given by the houngan at the Bois Caïman ceremony.',
+    bonus: 'Vodou protection: +1 bonus to one Wisdom roll (one use).',
+    abilities: ['WIS', 'CHA'],
+    historicalNote: 'At the Bois Caïman ceremony in August 1791, the houngan Dutty Boukman led a Vodou ritual that united enslaved people and launched the Haitian Revolution. Gris-gris bags were charms of protection.',
+  },
+];
+
+// 3 Grammar Quizzes — each has 3 questions, each question has 4 options
+const GRAMMAR_QUIZZES = [
+  {
+    id: 0,
+    topic: 'Simple Past',
+    emoji: '📖',
+    color: '#3498db',
+    bonusItemId: 'braids_rice',
+    intro: 'The rebels acted fast and made brave choices. Use the Simple Past to describe completed actions in the past.',
+    questions: [
+      {
+        text: 'Yesterday, the soldiers ___ the village at dawn.',
+        options: ['attack', 'attacked', 'have attacked', 'will attack'],
+        correct: 1,
+        explanation: '✔ "Attacked" — Simple Past of a regular verb (attack → attacked, +ed). We use Simple Past for a completed action at a specific time in the past.',
+      },
+      {
+        text: 'She ___ the rice in her braids before leaving the plantation.',
+        options: ['hides', 'hidden', 'hid', 'has hid'],
+        correct: 2,
+        explanation: '✔ "Hid" — Simple Past of the irregular verb "hide". Irregular verbs change completely: hide → hid → hidden.',
+      },
+      {
+        text: 'The rebels ___ at midnight and ___ north through the jungle.',
+        options: ['runned / went', 'ran / went', 'run / gone', 'ran / goed'],
+        correct: 1,
+        explanation: '✔ "Ran / went" — both are irregular Simple Past forms: run → ran, go → went. Never "runned" or "goed"!',
+      },
+    ],
+  },
+  {
+    id: 1,
+    topic: 'Past Perfect',
+    emoji: '🕰️',
+    color: '#9b59b6',
+    bonusItemId: 'cowrie',
+    intro: 'When two things happened in the past, the earlier one uses the Past Perfect (had + past participle).',
+    questions: [
+      {
+        text: 'When the soldiers arrived, the group ___ already ___ the village.',
+        options: ['have already / left', 'had already / left', 'already / leave', 'has already / left'],
+        correct: 1,
+        explanation: '✔ "Had already left" — Past Perfect = had + past participle. The group left BEFORE the soldiers arrived. The earlier action uses had + p.p.',
+      },
+      {
+        text: 'She knew the path because she ___ it many times before.',
+        options: ['walked', 'has walked', 'had walked', 'was walking'],
+        correct: 2,
+        explanation: '✔ "Had walked" — she walked the path (Past Perfect) BEFORE she knew it well (Simple Past). Earlier event → Past Perfect.',
+      },
+      {
+        text: 'They ___ the map before the soldiers ___ the house.',
+        options: ['burned / searched', 'had burned / searched', 'burned / had searched', 'have burned / search'],
+        correct: 1,
+        explanation: '✔ "Had burned / searched" — they burned the map first (Past Perfect), then the soldiers searched (Simple Past). The FIRST action uses Past Perfect.',
+      },
+    ],
+  },
+  {
+    id: 2,
+    topic: 'Passive Voice',
+    emoji: '⛓️',
+    color: '#e74c3c',
+    bonusItemId: 'grisgris',
+    intro: 'The Passive Voice focuses on what happened, not who did it. Form: was / were + past participle.',
+    questions: [
+      {
+        text: 'The plantation ___ burned to the ground during the revolt.',
+        options: ['is', 'was', 'were', 'been'],
+        correct: 1,
+        explanation: '✔ "Was burned" — Passive Voice in the past. "The plantation" is singular → was. Structure: subject + was/were + past participle.',
+      },
+      {
+        text: 'The seeds ___ hidden in her braids for three days.',
+        options: ['was', 'were', 'are', 'is'],
+        correct: 1,
+        explanation: '✔ "Were hidden" — "seeds" is plural → were. Passive Voice: were + past participle. "Hidden" is the past participle of "hide".',
+      },
+      {
+        text: 'The message ___ written in Creole by the freedom fighters.',
+        options: ['were', 'have', 'was', 'has'],
+        correct: 2,
+        explanation: '✔ "Was written" — "the message" is singular → was. "Written" is the past participle of "write". The agent comes after "by".',
+      },
+    ],
+  },
+];
+
+window.GAME_DATA = { ABILITIES, ITEMS, BONUS_ITEMS, EVENTS, SEVERITY, ROLL_OUTCOMES, GRAMMAR_QUIZZES };

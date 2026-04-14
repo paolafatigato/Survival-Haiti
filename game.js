@@ -21,6 +21,11 @@ let G = {
   usedEventIndices: new Set(),
   allTeamResults: [],  // results for current round
   history: [],
+  // ── Quiz phase state ────────────────────────────────────────
+  quizScores: [],      // array of teamIdx → points for the current quiz
+  currentQuizIdx: 0,
+  currentQuestionIdx: 0,
+  answerRevealed: false,
 };
 
 // ── SETUP ───────────────────────────────────────────────────────
@@ -127,6 +132,7 @@ function renderItemPicker() {
 }
 
 function startGame() {
+  // Build teams from setup form — tokens & game state set later in beginActualGame()
   G.teams = [];
   G.maxRounds = parseInt(document.getElementById('select-rounds').value) || 10;
   for (let i = 0; i < setupTeamCount; i++) {
@@ -139,11 +145,336 @@ function startGame() {
       eliminated: false,
     });
   }
+  // Reset quiz state
+  G.currentQuizIdx = 0;
+  G.currentQuestionIdx = 0;
+  G.answerRevealed = false;
+  G.quizScores = G.teams.map(() => 0);
+
+  showScreen('quiz');
+  renderQuizIntro(0);
+}
+
+// ── QUIZ PHASE ───────────────────────────────────────────────────
+
+function renderQuizIntro(quizIdx) {
+  const quiz = GAME_DATA.GRAMMAR_QUIZZES[quizIdx];
+  const bonusItem = GAME_DATA.BONUS_ITEMS.find(b => b.id === quiz.bonusItemId);
+
+  const progressDots = GAME_DATA.GRAMMAR_QUIZZES.map((q, i) =>
+    `<div class="qz-dot ${i < quizIdx ? 'done' : i === quizIdx ? 'active' : ''}" style="${i === quizIdx ? 'border-color:' + q.color + ';box-shadow:0 0 10px ' + q.color + '55;' : ''}">
+      ${i < quizIdx ? '✔' : i + 1}
+    </div>`
+  ).join('');
+
+  document.getElementById('quiz-area').innerHTML = `
+    <div class="qz-header">
+      <div class="qz-progress">${progressDots}</div>
+      <div class="qz-supertitle">Grammar Challenge ${quizIdx + 1} of 3</div>
+      <div class="qz-topic" style="color:${quiz.color};">${quiz.emoji} ${quiz.topic}</div>
+    </div>
+
+    <div class="qz-intro-card">
+      <div class="qz-intro-rule">${quiz.intro}</div>
+      <div class="qz-prize-row">
+        <div class="qz-prize-label">🏆 Prize for the winning team:</div>
+        <div class="qz-prize-item">
+          <span class="qz-prize-emoji">${bonusItem.emoji}</span>
+          <div>
+            <div class="qz-prize-name">${bonusItem.name}</div>
+            <div class="qz-prize-bonus">${bonusItem.bonus}</div>
+          </div>
+        </div>
+        <div class="qz-historical">
+          <span style="color:var(--ochre);font-size:.72rem;letter-spacing:1px;">HISTORICAL FACT</span><br>
+          ${bonusItem.historicalNote}
+        </div>
+      </div>
+    </div>
+
+    <div class="qz-team-preview">
+      ${G.teams.map((t, i) => `
+        <div class="qz-team-chip">
+          <div class="qz-team-dot" style="background:${t.color};"></div>
+          <span>${t.name}</span>
+          <span class="qz-score-chip" id="qscore-intro-${i}">0 pts</span>
+        </div>
+      `).join('')}
+    </div>
+
+    <div style="text-align:center;margin-top:2rem;">
+      <button class="btn btn-primary" style="font-size:1.1rem;padding:1rem 3rem;" onclick="startQuiz(${quizIdx})">
+        Begin Quiz ${quizIdx + 1} 🎯
+      </button>
+    </div>
+  `;
+}
+
+function startQuiz(quizIdx) {
+  G.currentQuizIdx = quizIdx;
+  G.currentQuestionIdx = 0;
+  G.answerRevealed = false;
+  G.quizScores = G.teams.map(() => 0);
+  renderQuizQuestion();
+}
+
+function renderQuizQuestion() {
+  const quiz = GAME_DATA.GRAMMAR_QUIZZES[G.currentQuizIdx];
+  const q = quiz.questions[G.currentQuestionIdx];
+  const qNum = G.currentQuestionIdx + 1;
+  const total = quiz.questions.length;
+
+  const optionLetters = ['A', 'B', 'C', 'D'];
+
+  const optionsHtml = q.options.map((opt, i) =>
+    `<button class="qz-option" id="qz-opt-${i}" onclick="revealQuizAnswer(${i})" data-idx="${i}">
+      <span class="qz-opt-letter">${optionLetters[i]}</span>
+      <span class="qz-opt-text">${opt}</span>
+    </button>`
+  ).join('');
+
+  const scoreChips = G.teams.map((t, i) =>
+    `<div class="qz-team-chip">
+      <div class="qz-team-dot" style="background:${t.color};"></div>
+      <span>${t.name}</span>
+      <span class="qz-score-chip" id="qscore-${i}">${G.quizScores[i]} pts</span>
+    </div>`
+  ).join('');
+
+  document.getElementById('quiz-area').innerHTML = `
+    <div class="qz-header">
+      <div class="qz-supertitle" style="color:${quiz.color};">${quiz.emoji} ${quiz.topic}</div>
+      <div class="qz-q-counter">Question ${qNum} / ${total}</div>
+      <div class="qz-q-bar">
+        ${quiz.questions.map((_, i) =>
+          `<div class="qz-q-pip ${i < G.currentQuestionIdx ? 'done' : i === G.currentQuestionIdx ? 'active' : ''}"></div>`
+        ).join('')}
+      </div>
+    </div>
+
+    <div class="qz-score-bar">${scoreChips}</div>
+
+    <div class="qz-question-card">
+      <div class="qz-question-text">${q.text}</div>
+      <div class="qz-options">${optionsHtml}</div>
+      <div class="qz-explanation" id="qz-explanation" style="display:none;">${q.explanation}</div>
+    </div>
+
+    <div class="qz-actions" id="qz-actions">
+      <div style="font-size:.9rem;color:var(--slate);font-style:italic;">
+        📢 Read the question aloud. Teams buzz in — then reveal the answer.
+      </div>
+      <button class="btn btn-gold" id="btn-reveal" onclick="revealQuizAnswer(-1)">
+        🔍 Reveal Answer
+      </button>
+    </div>
+
+    <div class="qz-award-section" id="qz-award" style="display:none;">
+      <div class="qz-award-label">➕ Which team answered correctly first?</div>
+      <div class="qz-award-btns">
+        ${G.teams.map((t, i) =>
+          `<button class="qz-award-btn" style="border-color:${t.color};" onclick="awardQuizPoint(${i})">
+            <div class="qz-team-dot" style="background:${t.color};"></div>
+            ${t.name}
+          </button>`
+        ).join('')}
+        <button class="qz-award-btn nobody" onclick="awardQuizPoint(-1)">
+          ✗ Nobody / Skip
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function revealQuizAnswer(clickedIdx) {
+  if (G.answerRevealed) return;
+  G.answerRevealed = true;
+
+  const quiz = GAME_DATA.GRAMMAR_QUIZZES[G.currentQuizIdx];
+  const q = quiz.questions[G.currentQuestionIdx];
+  const correct = q.correct;
+
+  // Highlight options
+  q.options.forEach((_, i) => {
+    const btn = document.getElementById(`qz-opt-${i}`);
+    if (!btn) return;
+    if (i === correct) {
+      btn.classList.add('correct');
+    } else {
+      btn.classList.add('wrong');
+    }
+    btn.disabled = true;
+  });
+
+  // Show explanation
+  const expEl = document.getElementById('qz-explanation');
+  if (expEl) { expEl.style.display = 'block'; }
+
+  // Hide reveal button, show award section
+  const actionsEl = document.getElementById('qz-actions');
+  if (actionsEl) actionsEl.style.display = 'none';
+  const awardEl = document.getElementById('qz-award');
+  if (awardEl) awardEl.style.display = 'block';
+}
+
+function awardQuizPoint(teamIdx) {
+  if (teamIdx >= 0) {
+    G.quizScores[teamIdx]++;
+    const chip = document.getElementById(`qscore-${teamIdx}`);
+    if (chip) chip.textContent = G.quizScores[teamIdx] + ' pts';
+    showNotification(`+1 point for ${G.teams[teamIdx].name}! 🎯`);
+  }
+
+  // Move to next question or end quiz
+  G.currentQuestionIdx++;
+  G.answerRevealed = false;
+
+  const quiz = GAME_DATA.GRAMMAR_QUIZZES[G.currentQuizIdx];
+  if (G.currentQuestionIdx < quiz.questions.length) {
+    setTimeout(() => renderQuizQuestion(), 400);
+  } else {
+    setTimeout(() => showQuizResult(), 500);
+  }
+}
+
+function showQuizResult() {
+  const quiz = GAME_DATA.GRAMMAR_QUIZZES[G.currentQuizIdx];
+  const bonusItem = GAME_DATA.BONUS_ITEMS.find(b => b.id === quiz.bonusItemId);
+
+  // Find winner(s)
+  const maxScore = Math.max(...G.quizScores);
+  const winners = G.teams.filter((_, i) => G.quizScores[i] === maxScore);
+  const isTie = winners.length > 1;
+
+  const scoreRows = G.teams.map((t, i) =>
+    `<div class="qz-result-row ${G.quizScores[i] === maxScore ? 'winner' : ''}">
+      <div class="qz-team-dot" style="background:${t.color};"></div>
+      <span class="qz-result-name">${t.name}</span>
+      <span class="qz-result-score">${G.quizScores[i]} / ${quiz.questions.length}</span>
+      ${G.quizScores[i] === maxScore ? '<span class="qz-crown">👑</span>' : ''}
+    </div>`
+  ).join('');
+
+  let winnerSection;
+  if (isTie) {
+    winnerSection = `
+      <div class="qz-tie-notice">
+        ⚖️ It's a tie! The bonus item goes to <strong>nobody</strong> this round — keep it for the escape.
+      </div>
+      <div style="text-align:center;margin-top:1.5rem;">
+        <button class="btn btn-gold" onclick="advanceQuizPhase()">Continue → Quiz ${G.currentQuizIdx + 2 <= 3 ? G.currentQuizIdx + 2 : '— Start the Escape!'} 🎯</button>
+      </div>
+    `;
+  } else {
+    const winnerIdx = G.teams.indexOf(winners[0]);
+    winnerSection = `
+      <div class="qz-winner-notice" style="border-color:${winners[0].color};">
+        <div class="qz-winner-name" style="color:${winners[0].color};">🏆 ${winners[0].name} wins!</div>
+        <div class="qz-prize-row" style="margin-top:.8rem;">
+          <div class="qz-prize-item">
+            <span class="qz-prize-emoji">${bonusItem.emoji}</span>
+            <div>
+              <div class="qz-prize-name">${bonusItem.name}</div>
+              <div class="qz-prize-bonus">${bonusItem.bonus}</div>
+            </div>
+          </div>
+        </div>
+        <div class="qz-historical" style="margin-top:.6rem;">${bonusItem.historicalNote}</div>
+      </div>
+      <div style="text-align:center;margin-top:1.5rem;">
+        <button class="btn btn-gold" onclick="claimBonusItem(${winnerIdx})">
+          ${bonusItem.emoji} ${winners[0].name} takes the ${bonusItem.name} →
+        </button>
+      </div>
+    `;
+  }
+
+  document.getElementById('quiz-area').innerHTML = `
+    <div class="qz-header">
+      <div class="qz-supertitle" style="color:${quiz.color};">${quiz.emoji} ${quiz.topic} — Results</div>
+    </div>
+
+    <div class="qz-results-table">${scoreRows}</div>
+
+    ${winnerSection}
+  `;
+}
+
+function claimBonusItem(winnerTeamIdx) {
+  const quiz = GAME_DATA.GRAMMAR_QUIZZES[G.currentQuizIdx];
+  const bonusItem = GAME_DATA.BONUS_ITEMS.find(b => b.id === quiz.bonusItemId);
+  // Add bonus item id to that team's items list
+  if (!G.teams[winnerTeamIdx].items.includes(bonusItem.id)) {
+    G.teams[winnerTeamIdx].items.push(bonusItem.id);
+  }
+  showNotification(`${bonusItem.emoji} ${bonusItem.name} added to ${G.teams[winnerTeamIdx].name}!`);
+  advanceQuizPhase();
+}
+
+function advanceQuizPhase() {
+  const nextQuizIdx = G.currentQuizIdx + 1;
+  if (nextQuizIdx < GAME_DATA.GRAMMAR_QUIZZES.length) {
+    G.currentQuizIdx = nextQuizIdx;
+    G.currentQuestionIdx = 0;
+    G.answerRevealed = false;
+    G.quizScores = G.teams.map(() => 0);
+    renderQuizIntro(nextQuizIdx);
+  } else {
+    showQuizPhaseEnd();
+  }
+}
+
+function showQuizPhaseEnd() {
+  const earned = G.teams
+    .map((t, i) => {
+      const bonusIds = GAME_DATA.BONUS_ITEMS.map(b => b.id);
+      const quizItems = t.items.filter(id => bonusIds.includes(id));
+      return quizItems.length > 0
+        ? `<div class="qz-result-row winner">
+            <div class="qz-team-dot" style="background:${t.color};"></div>
+            <span class="qz-result-name">${t.name}</span>
+            <span>${quizItems.map(id => {
+              const it = GAME_DATA.BONUS_ITEMS.find(b => b.id === id);
+              return it ? it.emoji + ' ' + it.name : id;
+            }).join(', ')}</span>
+           </div>`
+        : `<div class="qz-result-row">
+            <div class="qz-team-dot" style="background:${t.color};"></div>
+            <span class="qz-result-name">${t.name}</span>
+            <span style="color:var(--slate);">No bonus items</span>
+           </div>`;
+    }).join('');
+
+  document.getElementById('quiz-area').innerHTML = `
+    <div class="qz-header">
+      <div class="qz-supertitle" style="color:var(--gold);">⛓ Grammar Challenges Complete!</div>
+      <div style="color:var(--slate);font-size:.9rem;margin-top:.4rem;">All 3 quizzes finished. The escape begins now.</div>
+    </div>
+
+    <div class="qz-intro-card">
+      <div class="qz-prize-label" style="margin-bottom:.8rem;">Bonus items earned:</div>
+      <div class="qz-results-table">${earned}</div>
+    </div>
+
+    <div style="text-align:center;margin-top:2rem;">
+      <button class="btn btn-primary" style="font-size:1.2rem;padding:1.1rem 3.5rem;" onclick="beginActualGame()">
+        Start the Escape 🔱
+      </button>
+    </div>
+  `;
+}
+
+function beginActualGame() {
   G.round = 1;
   G.phase = 'idle';
   G.usedEventIndices = new Set();
   G.history = [];
-
+  // Merge BONUS_ITEMS into GAME_DATA.ITEMS pool for item display
+  GAME_DATA.BONUS_ITEMS.forEach(bi => {
+    if (!GAME_DATA.ITEMS.find(it => it.id === bi.id)) {
+      GAME_DATA.ITEMS.push(bi);
+    }
+  });
   showScreen('game');
   renderSidebar();
   renderPhaseIdle();
@@ -675,6 +1006,7 @@ function resetGame() {
     currentEvent: null, d20Event: null, d6Severity: null,
     activeTeamIdx: null, selectedAbility: null, abilityRoll: null,
     usedEventIndices: new Set(), allTeamResults: [], history: [],
+    quizScores: [], currentQuizIdx: 0, currentQuestionIdx: 0, answerRevealed: false,
   };
   showScreen('setup');
   renderTeamInputs();
@@ -691,10 +1023,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Expose all onclick-referenced functions globally
-window.startGame       = startGame;
-window.rollEventDice   = rollEventDice;
-window.selectAbility   = selectAbility;
+window.startGame        = startGame;
+window.beginActualGame  = beginActualGame;
+window.startQuiz        = startQuiz;
+window.revealQuizAnswer = revealQuizAnswer;
+window.awardQuizPoint   = awardQuizPoint;
+window.claimBonusItem   = claimBonusItem;
+window.advanceQuizPhase = advanceQuizPhase;
+window.rollEventDice    = rollEventDice;
+window.selectAbility    = selectAbility;
 window.rollAbilityCheck = rollAbilityCheck;
-window.backToEvent     = backToEvent;
-window.finishRound     = finishRound;
-window.resetGame       = resetGame;
+window.backToEvent      = backToEvent;
+window.finishRound      = finishRound;
+window.resetGame        = resetGame;
